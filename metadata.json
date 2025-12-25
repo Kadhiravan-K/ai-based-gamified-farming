@@ -1,0 +1,9 @@
+{
+  "name": "AgriQuest: Green Farm Movement",
+  "description": "A gamified platform empowering farmers to adopt sustainable practices through personalized quests, community leaderboards, and AI-powered agricultural advice.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
