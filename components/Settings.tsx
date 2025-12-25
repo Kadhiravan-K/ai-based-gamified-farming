@@ -1,32 +1,18 @@
-
 import React, { useState } from 'react';
 import { User, FarmProfile, CropEntry, LandUnit } from '../types';
 import { 
   User as UserIcon, 
   Sprout, 
-  Shield, 
   Trash2, 
   Save, 
   Mail, 
-  MapPin, 
   RefreshCcw,
   CheckCircle,
-  AlertCircle,
   Plus,
   X,
   Ruler,
-  Bell,
-  LayoutGrid,
-  Settings as SettingsIcon,
-  Trophy,
-  BrainCircuit,
-  Link as LinkIcon,
-  Microscope,
-  Cpu,
-  BarChart3,
   Wallet,
-  Users,
-  ChevronDown
+  Users
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -37,21 +23,10 @@ interface SettingsProps {
   onReset: () => void;
 }
 
-const OPTIONAL_MODULES = [
-  { id: 'quests', label: 'Mission Hub', icon: Trophy, desc: 'Gamified farming challenges' },
-  { id: 'ml', label: 'Neural Hub', icon: BrainCircuit, desc: 'Deep learning crop forecasts' },
-  { id: 'traceability', label: 'Harvest Ledger', icon: LinkIcon, desc: 'Blockchain verification' },
-  { id: 'soil', label: 'Soil Hub', icon: Microscope, desc: 'Lab data tracking' },
-  { id: 'iot', label: 'Automation', icon: Cpu, desc: 'IoT sensor network' },
-  { id: 'market', label: 'Market Pulse', icon: BarChart3, desc: 'Live trading signals' },
-  { id: 'finance', label: 'Finances', icon: Wallet, desc: 'ROI tracking' },
-  { id: 'community', label: 'Community', icon: Users, desc: 'Village rankings' }
-];
-
 const Settings: React.FC<SettingsProps> = ({ user, profile, onUserUpdate, onProfileUpdate, onReset }) => {
   const [localUser, setLocalUser] = useState(user);
   const [localProfile, setLocalProfile] = useState(profile);
-  const [newCrop, setNewCrop] = useState({ name: '', area: 0 });
+  const [newCrop, setNewCrop] = useState({ name: '', area: '', unit: profile.unit || ('Acres' as LandUnit) });
   const [activeUnit, setActiveUnit] = useState<LandUnit>(profile.unit || 'Acres');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -70,26 +45,19 @@ const Settings: React.FC<SettingsProps> = ({ user, profile, onUserUpdate, onProf
     }, 800);
   };
 
-  const toggleModule = (moduleId: string) => {
-    const current = localUser.enabledModules || [];
-    const updated = current.includes(moduleId) 
-      ? current.filter(id => id !== moduleId) 
-      : [...current, moduleId];
-    setLocalUser({ ...localUser, enabledModules: updated });
-  };
-
   const addCrop = () => {
-    if (newCrop.name.trim() && newCrop.area > 0) {
+    const areaValue = parseFloat(newCrop.area);
+    if (newCrop.name.trim() && !isNaN(areaValue) && areaValue > 0) {
       setLocalProfile({
         ...localProfile,
         crops: [...localProfile.crops, { 
           id: Math.random().toString(36).substr(2, 9),
           name: newCrop.name,
-          area: newCrop.area,
-          unit: activeUnit
+          area: areaValue,
+          unit: newCrop.unit
         }]
       });
-      setNewCrop({ name: '', area: 0 });
+      setNewCrop({ name: '', area: '', unit: activeUnit });
     }
   };
 
@@ -98,12 +66,6 @@ const Settings: React.FC<SettingsProps> = ({ user, profile, onUserUpdate, onProf
       ...localProfile,
       crops: localProfile.crops.filter((_, i) => i !== index)
     });
-  };
-
-  const updateCrop = (index: number, updates: Partial<CropEntry>) => {
-    const next = [...localProfile.crops];
-    next[index] = { ...next[index], ...updates };
-    setLocalProfile({ ...localProfile, crops: next });
   };
 
   return (
@@ -149,46 +111,69 @@ const Settings: React.FC<SettingsProps> = ({ user, profile, onUserUpdate, onProf
         </div>
       </section>
 
-      {/* New Entry Pipeline - Refined UI as per user request */}
+      {/* New Entry Pipeline */}
       <section className="bg-white rounded-[2.5rem] border border-slate-200 p-6 sm:p-8 shadow-sm">
         <div className="p-6 bg-[#f0fdf9] rounded-[2.5rem] border border-[#ccfbf1] flex flex-col gap-5">
           <h4 className="text-[11px] font-black text-[#0f766e] uppercase tracking-[0.15em] px-1">NEW ENTRY PIPELINE</h4>
           <div className="flex flex-col gap-4">
-            {/* Crop Variety Input */}
             <input 
               placeholder="Crop Variety (e.g. Rice)"
               value={newCrop.name}
               onChange={e => setNewCrop({ ...newCrop, name: e.target.value })}
-              className="w-full px-6 py-5 bg-white border border-[#e2e88020] rounded-[1.8rem] text-sm font-black text-slate-900 placeholder:text-slate-400 focus:ring-4 focus:ring-[#10b98115] outline-none shadow-sm transition-all"
+              className="w-full px-6 py-5 bg-white border border-[#ccfbf1] rounded-[1.8rem] text-sm font-black text-slate-900 placeholder:text-slate-400 focus:ring-4 focus:ring-[#10b98115] outline-none shadow-sm transition-all"
             />
             
             <div className="flex items-center gap-3">
-              {/* Area Input + Integrated Dropdown */}
               <div className="flex-1 relative flex items-center group border-[#ccfbf1] border rounded-[1.8rem] bg-white overflow-hidden">
                 <input 
                   type="number"
+                  step="any"
                   placeholder="Area"
-                  value={newCrop.area || ''}
-                  onChange={e => setNewCrop({ ...newCrop, area: parseFloat(e.target.value) || 0 })}
+                  value={newCrop.area}
+                  onChange={e => setNewCrop({ ...newCrop, area: e.target.value })}
                   className="w-full pl-6 pr-32 py-5 bg-transparent text-sm font-black text-slate-900 placeholder:text-slate-400 focus:ring-0 outline-none"
                 />
                 <div className="absolute right-4 flex items-center gap-2">
-                  <div className="bg-[#f8fafc] border border-slate-200 rounded-full px-4 py-2 flex items-center gap-2 shadow-sm">
-                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{activeUnit}</span>
+                  <div className="bg-[#f8fafc] border border-slate-200 rounded-full px-2 py-1 flex items-center shadow-sm">
+                    <select
+                      className="text-[10px] font-black text-slate-500 bg-transparent uppercase tracking-widest outline-none cursor-pointer px-2 py-1"
+                      value={newCrop.unit}
+                      onChange={e => setNewCrop({ ...newCrop, unit: e.target.value as LandUnit })}
+                    >
+                      {landUnits.map(u => <option key={u} value={u}>{u}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
 
-              {/* Add Button */}
               <button 
                 onClick={addCrop}
                 disabled={!newCrop.name || !newCrop.area}
-                className="px-8 py-5 bg-[#cbd5e1] text-white rounded-[1.8rem] text-[11px] font-black uppercase tracking-[0.15em] hover:bg-[#10b981] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 active:scale-95 shrink-0"
+                className="px-8 py-5 bg-slate-900 text-white rounded-[1.8rem] text-[11px] font-black uppercase tracking-[0.15em] hover:bg-[#10b981] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 active:scale-95 shrink-0"
               >
                 <Plus className="w-4 h-4" /> ADD
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="mt-8 space-y-4">
+          {localProfile.crops.map((crop, idx) => (
+            <div key={crop.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100 group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white rounded-xl shadow-sm">
+                  <Sprout className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h5 className="font-black text-sm text-slate-900">{crop.name}</h5>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{crop.area} {crop.unit}</p>
+                </div>
+              </div>
+              <button onClick={() => removeCrop(idx)} className="p-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
         </div>
       </section>
 
