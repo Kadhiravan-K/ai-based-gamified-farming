@@ -5,7 +5,7 @@
 ---
 
 ## 👨‍💻 Lead Developer
-**Aadhavan** — *Full-Stack AI Architect*
+**Aadhavan** — *Full-Stack AI Architect* --phase 0
 
 ---
 
