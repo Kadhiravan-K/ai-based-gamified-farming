@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User, FarmProfile } from '../types';
+import { User, FarmProfile, CropEntry, LandUnit } from '../types';
 import { 
   User as UserIcon, 
   Sprout, 
@@ -9,11 +9,24 @@ import {
   Save, 
   Mail, 
   MapPin, 
-  Maximize2, 
   RefreshCcw,
   CheckCircle,
   AlertCircle,
-  X
+  Plus,
+  X,
+  Ruler,
+  Bell,
+  LayoutGrid,
+  Settings as SettingsIcon,
+  Trophy,
+  BrainCircuit,
+  Link as LinkIcon,
+  Microscope,
+  Cpu,
+  BarChart3,
+  Wallet,
+  Users,
+  ChevronDown
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -24,224 +37,203 @@ interface SettingsProps {
   onReset: () => void;
 }
 
+const OPTIONAL_MODULES = [
+  { id: 'quests', label: 'Mission Hub', icon: Trophy, desc: 'Gamified farming challenges' },
+  { id: 'ml', label: 'Neural Hub', icon: BrainCircuit, desc: 'Deep learning crop forecasts' },
+  { id: 'traceability', label: 'Harvest Ledger', icon: LinkIcon, desc: 'Blockchain verification' },
+  { id: 'soil', label: 'Soil Hub', icon: Microscope, desc: 'Lab data tracking' },
+  { id: 'iot', label: 'Automation', icon: Cpu, desc: 'IoT sensor network' },
+  { id: 'market', label: 'Market Pulse', icon: BarChart3, desc: 'Live trading signals' },
+  { id: 'finance', label: 'Finances', icon: Wallet, desc: 'ROI tracking' },
+  { id: 'community', label: 'Community', icon: Users, desc: 'Village rankings' }
+];
+
 const Settings: React.FC<SettingsProps> = ({ user, profile, onUserUpdate, onProfileUpdate, onReset }) => {
   const [localUser, setLocalUser] = useState(user);
   const [localProfile, setLocalProfile] = useState(profile);
-  const [newCrop, setNewCrop] = useState('');
+  const [newCrop, setNewCrop] = useState({ name: '', area: 0 });
+  const [activeUnit, setActiveUnit] = useState<LandUnit>(profile.unit || 'Acres');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const landUnits: LandUnit[] = ['Acres', 'Hectares', 'Bigha', 'Kanal', 'Marla', 'Guntha', 'Cents', 'Biswa'];
 
   const handleSave = () => {
     setSaveStatus('saving');
+    const totalArea = localProfile.crops.reduce((sum, c) => sum + c.area, 0);
+    const updatedProfile = { ...localProfile, totalArea, unit: activeUnit };
+    
     setTimeout(() => {
       onUserUpdate(localUser);
-      onProfileUpdate(localProfile);
+      onProfileUpdate(updatedProfile);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }, 800);
   };
 
+  const toggleModule = (moduleId: string) => {
+    const current = localUser.enabledModules || [];
+    const updated = current.includes(moduleId) 
+      ? current.filter(id => id !== moduleId) 
+      : [...current, moduleId];
+    setLocalUser({ ...localUser, enabledModules: updated });
+  };
+
   const addCrop = () => {
-    if (newCrop.trim() && !localProfile.crops.includes(newCrop.trim())) {
+    if (newCrop.name.trim() && newCrop.area > 0) {
       setLocalProfile({
         ...localProfile,
-        crops: [...localProfile.crops, newCrop.trim()]
+        crops: [...localProfile.crops, { 
+          id: Math.random().toString(36).substr(2, 9),
+          name: newCrop.name,
+          area: newCrop.area,
+          unit: activeUnit
+        }]
       });
-      setNewCrop('');
+      setNewCrop({ name: '', area: 0 });
     }
   };
 
-  const removeCrop = (cropToRemove: string) => {
+  const removeCrop = (index: number) => {
     setLocalProfile({
       ...localProfile,
-      crops: localProfile.crops.filter(c => c !== cropToRemove)
+      crops: localProfile.crops.filter((_, i) => i !== index)
     });
   };
 
+  const updateCrop = (index: number, updates: Partial<CropEntry>) => {
+    const next = [...localProfile.crops];
+    next[index] = { ...next[index], ...updates };
+    setLocalProfile({ ...localProfile, crops: next });
+  };
+
   return (
-    <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
-      {/* Profile Section */}
-      <section className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+    <div className="max-w-4xl space-y-8 animate-in fade-in duration-500 pb-32 no-horizontal-scroll">
+      
+      {/* Identity Profile */}
+      <section className="bg-white rounded-[2.5rem] border border-slate-200 p-6 sm:p-8 shadow-sm">
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600">
+          <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-700">
             <UserIcon className="w-6 h-6" />
           </div>
           <div>
             <h3 className="text-xl font-black text-slate-900 font-outfit">Identity Profile</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Manage your farmer identity</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manage your farmer credentials</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-700 uppercase tracking-widest px-1">Display Name</label>
+            <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest px-1">Display Name</label>
             <div className="relative">
               <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="text"
                 value={localUser.name}
                 onChange={(e) => setLocalUser({ ...localUser, name: e.target.value })}
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
+                className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-black text-sm"
               />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-700 uppercase tracking-widest px-1">Email Address</label>
+            <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest px-1">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="email"
                 value={localUser.email}
                 onChange={(e) => setLocalUser({ ...localUser, email: e.target.value })}
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
+                className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-black text-sm"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Farm Profile Section */}
-      <section className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
-            <Sprout className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-xl font-black text-slate-900 font-outfit">Farm Configuration</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Update your agricultural parameters</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 uppercase tracking-widest px-1">Crop Ecosystem</label>
-              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl min-h-[100px] items-start">
-                {localProfile.crops.map(crop => (
-                  <span key={crop} className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 border border-emerald-200">
-                    {crop}
-                    <button onClick={() => removeCrop(crop)} className="hover:text-red-500"><X className="w-3 h-3" /></button>
-                  </span>
-                ))}
-                {localProfile.crops.length === 0 && <span className="text-slate-400 text-xs py-1.5 italic">No crops listed</span>}
-              </div>
-            </div>
+      {/* New Entry Pipeline - Refined UI as per user request */}
+      <section className="bg-white rounded-[2.5rem] border border-slate-200 p-6 sm:p-8 shadow-sm">
+        <div className="p-6 bg-[#f0fdf9] rounded-[2.5rem] border border-[#ccfbf1] flex flex-col gap-5">
+          <h4 className="text-[11px] font-black text-[#0f766e] uppercase tracking-[0.15em] px-1">NEW ENTRY PIPELINE</h4>
+          <div className="flex flex-col gap-4">
+            {/* Crop Variety Input */}
+            <input 
+              placeholder="Crop Variety (e.g. Rice)"
+              value={newCrop.name}
+              onChange={e => setNewCrop({ ...newCrop, name: e.target.value })}
+              className="w-full px-6 py-5 bg-white border border-[#e2e88020] rounded-[1.8rem] text-sm font-black text-slate-900 placeholder:text-slate-400 focus:ring-4 focus:ring-[#10b98115] outline-none shadow-sm transition-all"
+            />
             
-            <div className="flex gap-2">
-              <input 
-                value={newCrop}
-                onChange={(e) => setNewCrop(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCrop())}
-                placeholder="Add crop (e.g. Millet)"
-                className="flex-1 px-5 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-4 focus:ring-emerald-500/10 outline-none"
-              />
-              <button onClick={addCrop} className="bg-slate-900 text-white px-5 rounded-xl text-xs font-black uppercase hover:bg-emerald-600 transition-all">Add</button>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 uppercase tracking-widest px-1">Farm Size</label>
-              <div className="relative">
-                <Maximize2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <select 
-                  value={localProfile.farmSize}
-                  onChange={(e) => setLocalProfile({ ...localProfile, farmSize: e.target.value })}
-                  className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium appearance-none"
-                >
-                  <option value="small">Small ( &lt; 2 acres )</option>
-                  <option value="medium">Medium ( 2-10 acres )</option>
-                  <option value="large">Large ( &gt; 10 acres )</option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-700 uppercase tracking-widest px-1">Location</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-3">
+              {/* Area Input + Integrated Dropdown */}
+              <div className="flex-1 relative flex items-center group border-[#ccfbf1] border rounded-[1.8rem] bg-white overflow-hidden">
                 <input 
-                  type="text"
-                  value={localProfile.location}
-                  onChange={(e) => setLocalProfile({ ...localProfile, location: e.target.value })}
-                  className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
+                  type="number"
+                  placeholder="Area"
+                  value={newCrop.area || ''}
+                  onChange={e => setNewCrop({ ...newCrop, area: parseFloat(e.target.value) || 0 })}
+                  className="w-full pl-6 pr-32 py-5 bg-transparent text-sm font-black text-slate-900 placeholder:text-slate-400 focus:ring-0 outline-none"
                 />
+                <div className="absolute right-4 flex items-center gap-2">
+                  <div className="bg-[#f8fafc] border border-slate-200 rounded-full px-4 py-2 flex items-center gap-2 shadow-sm">
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{activeUnit}</span>
+                  </div>
+                </div>
               </div>
+
+              {/* Add Button */}
+              <button 
+                onClick={addCrop}
+                disabled={!newCrop.name || !newCrop.area}
+                className="px-8 py-5 bg-[#cbd5e1] text-white rounded-[1.8rem] text-[11px] font-black uppercase tracking-[0.15em] hover:bg-[#10b981] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 active:scale-95 shrink-0"
+              >
+                <Plus className="w-4 h-4" /> ADD
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Privacy & Security */}
-      <section className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 bg-slate-100 rounded-2xl text-slate-600">
-            <Shield className="w-6 h-6" />
+      {/* Primary Unit Logic Grid */}
+      <section className="bg-white rounded-[2.5rem] border border-slate-200 p-6 sm:p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-slate-100 rounded-2xl text-slate-700">
+            <Ruler className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-xl font-black text-slate-900 font-outfit">Privacy & Visibility</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Control how you appear to others</p>
+            <h3 className="text-xl font-black text-slate-900 font-outfit">Primary Unit Logic</h3>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">GLOBAL SCALING FOR AREA MEASUREMENTS</p>
           </div>
         </div>
-
-        <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
-          <div className="space-y-1">
-            <h4 className="font-black text-slate-800">Community Leaderboard</h4>
-            <p className="text-xs text-slate-500">When enabled, your farm score is visible to the village community.</p>
-          </div>
-          <button 
-            onClick={() => setLocalUser({ ...localUser, privacy: localUser.privacy === 'public' ? 'private' : 'public' })}
-            className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${localUser.privacy === 'public' ? 'bg-emerald-500' : 'bg-slate-300'}`}
-          >
-            <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${localUser.privacy === 'public' ? 'translate-x-7' : 'translate-x-1'}`} />
-          </button>
+        <div className="grid grid-cols-2 gap-3">
+          {landUnits.map(u => (
+            <button 
+              key={u}
+              onClick={() => setActiveUnit(u)}
+              className={`py-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                activeUnit === u ? 'bg-[#1e293b] text-white border-[#1e293b] shadow-lg' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
+              }`}
+            >
+              {u}
+            </button>
+          ))}
         </div>
       </section>
 
       {/* Save Button */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
+      <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 px-1">
         <button 
           onClick={handleSave}
           disabled={saveStatus !== 'idle'}
-          className={`w-full sm:w-auto min-w-[200px] flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black transition-all shadow-xl ${
-            saveStatus === 'saved' ? 'bg-emerald-100 text-emerald-700' : 
-            saveStatus === 'saving' ? 'bg-slate-100 text-slate-400' : 
+          className={`w-full sm:w-auto min-w-[220px] flex items-center justify-center gap-3 px-8 py-5 rounded-[1.5rem] font-black transition-all shadow-xl shadow-slate-200 ${
+            saveStatus === 'saved' ? 'bg-emerald-100 text-emerald-800' : 
+            saveStatus === 'saving' ? 'bg-slate-100 text-slate-400 border-none shadow-none' : 
             'bg-slate-900 text-white hover:bg-emerald-600'
           }`}
         >
-          {saveStatus === 'idle' && <><Save className="w-5 h-5" /> Update Profile</>}
-          {saveStatus === 'saving' && <><RefreshCcw className="w-5 h-5 animate-spin" /> Saving Changes...</>}
-          {saveStatus === 'saved' && <><CheckCircle className="w-5 h-5" /> Configuration Saved!</>}
+          {saveStatus === 'idle' && <><Save className="w-5 h-5" /> Commit Node Profile</>}
+          {saveStatus === 'saving' && <><RefreshCcw className="w-5 h-5 animate-spin" /> Uplinking Core...</>}
+          {saveStatus === 'saved' && <><CheckCircle className="w-5 h-5" /> Verified & Saved!</>}
         </button>
-
-        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-          Changes are synced with your local storage instantly.
-        </p>
       </div>
-
-      {/* Danger Zone */}
-      <section className="bg-red-50 rounded-[2rem] border border-red-100 p-8 mt-12">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-red-100 rounded-2xl text-red-600">
-            <AlertCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-xl font-black text-red-900 font-outfit">Danger Zone</h3>
-            <p className="text-xs font-bold text-red-600/60 uppercase tracking-widest">Irreversible actions</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6 bg-white/50 rounded-3xl border border-red-200 border-dashed">
-          <div className="space-y-1">
-            <h4 className="font-black text-red-900">Reset Farm Progress</h4>
-            <p className="text-xs text-red-700/70">Wipe all quests, badges, finance records and IoT history.</p>
-          </div>
-          <button 
-            onClick={onReset}
-            className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" /> Hard Reset
-          </button>
-        </div>
-      </section>
     </div>
   );
 };

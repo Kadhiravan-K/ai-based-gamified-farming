@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, Minus, Calendar, Loader2, Sparkles, AlertTriangle, ExternalLink } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Minus, Calendar, Loader2, Sparkles, AlertTriangle, ExternalLink, ArrowRightCircle, Target, Zap } from 'lucide-react';
 import { FarmProfile, MarketTrend } from '../types';
 import { getMarketPulse } from '../services/geminiService';
 
@@ -32,70 +32,104 @@ const MarketTrends: React.FC<MarketTrendsProps> = ({ profile, isOnline }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 font-outfit">Market Pulse</h2>
-          <p className="text-sm text-slate-500">Live search-grounded insights for your crops</p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Real-time Ticker Header */}
+      <div className="bg-slate-900 overflow-hidden py-3 px-6 rounded-2xl flex items-center gap-4 group">
+        <div className="flex items-center gap-2 whitespace-nowrap animate-pulse">
+          <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+          <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Live Market Feed</span>
         </div>
-        <button 
-          onClick={refreshPulse}
-          disabled={loading || !isOnline}
-          className="p-3 bg-white border rounded-2xl text-emerald-600 shadow-sm disabled:opacity-50 hover:bg-emerald-50 transition-all"
-        >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+        <div className="flex-1 overflow-hidden whitespace-nowrap">
+           <p className="text-white text-[11px] font-bold font-mono tracking-tighter opacity-70 group-hover:opacity-100 transition-opacity">
+             {pulse ? `${pulse.cropName} Index @ ${pulse.currentPrice} | Signal: ${pulse.sellingSignal} | Rating: ${pulse.priceRating}` : 'Initializing Real-time Ticker...'}
+           </p>
+        </div>
+        <button onClick={refreshPulse} disabled={loading} className="text-emerald-400 hover:text-white transition-all">
+          <Sparkles className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 font-outfit">Market Pulse Hub</h2>
+          <p className="text-sm text-slate-500 font-bold">Search-grounded trading signals & strategic alerts</p>
+        </div>
+      </div>
+
+      {loading && !pulse && (
+        <div className="py-24 flex flex-col items-center justify-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
+          <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mb-4" />
+          <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Querying Global Exchanges...</p>
+        </div>
+      )}
+
       {pulse && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white p-8 rounded-[2rem] border shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-6">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Market Price</span>
-                <div className={`p-2 rounded-xl ${pulse.priceTrend === 'up' ? 'bg-emerald-50 text-emerald-600' : pulse.priceTrend === 'down' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-600'}`}>
-                  {pulse.priceTrend === 'up' ? <TrendingUp className="w-4 h-4" /> : pulse.priceTrend === 'down' ? <TrendingDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-                </div>
-              </div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-4xl font-black text-slate-900">${pulse.currentPrice}</span>
-              </div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">{pulse.cropName} Trends</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Today's Price Logic */}
+          <div className="bg-white p-8 rounded-[3rem] border shadow-sm relative overflow-hidden group">
+            <div className="absolute top-6 right-8">
+               <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 ${
+                 pulse.priceRating === 'Peak' || pulse.priceRating === 'Excellent' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                 pulse.priceRating === 'Poor' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-100 text-slate-600 border-slate-200'
+               }`}>
+                 Today: {pulse.priceRating}
+               </div>
             </div>
-
-            <div className="bg-slate-900 p-8 rounded-[2rem] shadow-xl text-white">
-              <div className="flex items-center gap-3 mb-6">
-                <Calendar className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-bold text-lg font-outfit">Regional Forecast</h3>
-              </div>
-              <p className="text-sm leading-relaxed text-slate-300 italic">"{pulse.demandForecast}"</p>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Spot Price (Today)</span>
+            <div className="flex items-baseline gap-2 mb-6">
+               <span className="text-6xl font-black text-slate-900 font-outfit">${pulse.currentPrice}</span>
+               <span className="text-sm font-black text-slate-400 uppercase">/ UNIT</span>
             </div>
-
-            <div className="bg-emerald-600 p-8 rounded-[2rem] shadow-xl text-white">
-              <div className="flex items-center gap-3 mb-6">
-                <BarChart3 className="w-5 h-5" />
-                <h3 className="font-bold text-lg font-outfit">Strategic Action</h3>
-              </div>
-              <h4 className="text-2xl font-black mb-2">{pulse.suggestedAction}</h4>
-              <p className="text-xs font-bold uppercase text-emerald-100">Grounded in Live Data</p>
+            <div className={`flex items-center gap-3 p-4 rounded-2xl ${pulse.priceTrend === 'up' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+               {pulse.priceTrend === 'up' ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+               <span className="text-xs font-black uppercase tracking-tight">Market Momentum: {pulse.priceTrend}</span>
             </div>
           </div>
 
-          {pulse.sources && pulse.sources.length > 0 && (
-            <div className="bg-white border rounded-2xl p-6 shadow-sm">
-              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <ExternalLink className="w-3.5 h-3.5" /> Sources & Grounding
-              </h4>
-              <div className="flex flex-wrap gap-3">
-                {pulse.sources.map((s, i) => (
-                  <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all truncate max-w-xs">
-                    {s.title}
-                  </a>
-                ))}
-              </div>
+          {/* Strategic Selling Oracle */}
+          <div className={`p-8 rounded-[3rem] shadow-xl text-white flex flex-col justify-between relative overflow-hidden ${
+             pulse.sellingSignal === 'Sell' ? 'bg-emerald-600' : pulse.sellingSignal === 'Hold' ? 'bg-slate-900' : 'bg-orange-600'
+          }`}>
+             <div className="relative z-10">
+               <div className="flex items-center gap-3 mb-6">
+                 <Target className="w-6 h-6 text-white/50" />
+                 <h3 className="font-black text-xl font-outfit uppercase tracking-tight">Trading Signal</h3>
+               </div>
+               <div className="mb-8">
+                  <h4 className="text-6xl font-black font-outfit mb-2">{pulse.sellingSignal}</h4>
+                  <p className="text-white/70 text-sm font-bold leading-relaxed">{pulse.demandForecast}</p>
+               </div>
+             </div>
+             <div className="bg-white/10 p-4 rounded-2xl relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/60 mb-1">AI Logic Recommendation</p>
+                <p className="text-xs font-bold leading-tight">{pulse.suggestedAction}</p>
+             </div>
+             <Zap className="absolute -bottom-6 -right-6 w-32 h-32 opacity-10" />
+          </div>
+
+          {/* Sources and Context */}
+          <div className="bg-white border rounded-[3rem] p-8 shadow-sm flex flex-col">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <ExternalLink className="w-4 h-4" /> Market Data Grounding
+            </h4>
+            <div className="space-y-4 flex-1">
+              {pulse.sources && pulse.sources.length > 0 ? pulse.sources.map((s, i) => (
+                <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer" className="block p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-emerald-50 hover:border-emerald-200 transition-all group">
+                  <p className="text-xs font-black text-slate-900 group-hover:text-emerald-700 line-clamp-1 mb-1">{s.title}</p>
+                  <p className="text-[9px] font-mono text-slate-400 truncate">{s.uri}</p>
+                </a>
+              )) : (
+                <div className="flex flex-col items-center justify-center h-full text-center py-10">
+                   <AlertTriangle className="w-8 h-8 text-slate-200 mb-2" />
+                   <p className="text-[10px] font-black text-slate-400 uppercase">Live search sourcing disabled.</p>
+                </div>
+              )}
             </div>
-          )}
-        </>
+            <div className="mt-8 pt-6 border-t border-slate-100">
+               <p className="text-[10px] font-bold text-slate-400 italic">Price estimates are based on current search-grounded market indexes for {profile.location}. Always verify with local mandis before final sale.</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -3,17 +3,78 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AgriQuest</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --scrollbar-width: 8px;
+      --scrollbar-bg: #f8fafc;
+      --scrollbar-thumb: #10b981;
+      --scrollbar-thumb-hover: #059669;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background-color: #f8fafc;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+      width: 100vw;
     }
+
     .font-outfit {
       font-family: 'Outfit', sans-serif;
+    }
+
+    /* Remove numeric input arrows */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    /* Separate Custom UI Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: var(--scrollbar-width);
+      height: var(--scrollbar-width);
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--scrollbar-bg);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 10px;
+      border: 2px solid var(--scrollbar-bg);
+      transition: background 0.3s ease;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+    }
+
+    /* Firefox Support */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-bg);
+    }
+
+    /* Utility to hide horizontal scroll completely */
+    .no-horizontal-scroll {
+      overflow-x: hidden !important;
+    }
+
+    /* Mobile specific tweaks */
+    @media (max-width: 640px) {
+      ::-webkit-scrollbar {
+        width: 4px; /* Slimmer on mobile */
+      }
     }
   </style>
 <script type="importmap">
@@ -29,7 +90,7 @@
 }
 </script>
 </head>
-<body>
+<body class="no-horizontal-scroll">
   <div id="root"></div>
 </body>
 </html>

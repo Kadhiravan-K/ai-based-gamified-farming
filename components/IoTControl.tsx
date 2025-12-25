@@ -1,229 +1,195 @@
 
 import React, { useEffect, useState } from 'react';
-import { Cpu, Droplets, Power, Activity, Thermometer, RefreshCcw, Clock, Settings2, ShieldCheck, Microscope, Zap } from 'lucide-react';
-import { IoTState } from '../types';
+import { Cpu, Droplets, Power, Activity, Microscope, Zap, Plus, Trash2, X, Wand2, Link, BrainCircuit } from 'lucide-react';
+import { IoTNode, FarmProfile, WeatherData } from '../types';
 
 interface IoTControlProps {
-  state: IoTState;
-  onUpdate: (updates: Partial<IoTState>) => void;
+  nodes: IoTNode[];
+  onUpdate: (nodeId: string, updates: Partial<IoTNode>) => void;
+  onAdd: (node: IoTNode) => void;
+  onRemove: (nodeId: string) => void;
+  profile: FarmProfile;
+  weather: WeatherData | null;
 }
 
-const IoTControl: React.FC<IoTControlProps> = ({ state, onUpdate }) => {
-  // Simulator Logic for soil dynamics
+const CROP_MOISTURE_REQUIREMENTS: Record<string, { min: number, max: number }> = {
+  'rice': { min: 60, max: 90 },
+  'wheat': { min: 40, max: 65 },
+  'corn': { min: 50, max: 70 },
+  'maize': { min: 50, max: 70 },
+  'cotton': { min: 40, max: 60 },
+  'soybean': { min: 50, max: 75 },
+  'sugarcane': { min: 65, max: 95 },
+  'tomato': { min: 55, max: 75 },
+  'potato': { min: 50, max: 70 },
+};
+
+const IoTControl: React.FC<IoTControlProps> = ({ nodes, onUpdate, onAdd, onRemove, profile, weather }) => {
+  const [isAddingNode, setIsAddingNode] = useState(false);
+  const [newNode, setNewNode] = useState<Partial<IoTNode>>({ name: '', type: 'integrated', targetCrop: profile.crops[0]?.name || '' });
+
   useEffect(() => {
     const interval = setInterval(() => {
-      // 1. Process Pump State based on Mode
-      if (state.mode === 'sensor') {
-        if (state.moisture < state.threshold && !state.pumpActive) {
-          onUpdate({ pumpActive: true });
-        } else if (state.moisture > (state.threshold + 30) && state.pumpActive) {
-          onUpdate({ pumpActive: false });
-        }
-      }
+      nodes.forEach(node => {
+        if (node.status === 'offline') return;
+        let updates: Partial<IoTNode> = {};
+        let shouldUpdate = false;
 
-      // 2. Process Physics Simulation
-      if (state.pumpActive) {
-        onUpdate({ 
-          moisture: Math.min(100, state.moisture + 0.8),
-          nutrients: {
-            n: Math.max(0, state.nutrients.n - 0.05), // Leaching simulation
-            p: state.nutrients.p,
-            k: state.nutrients.k
+        const isRaining = weather?.condition.toLowerCase().includes('rain') || weather?.condition.toLowerCase().includes('drizzle');
+
+        // Logic for auto-pumps
+        if (node.mode === 'sensor' || node.mode === 'ml_optimized') {
+          const effectiveThreshold = node.mode === 'ml_optimized' ? node.threshold + 5 : node.threshold;
+          const sensorNode = node.type === 'integrated' ? node : nodes.find(n => n.id === node.linkedSensorId);
+          if (sensorNode && sensorNode.moisture !== undefined) {
+            if (sensorNode.moisture < effectiveThreshold && !node.pumpActive) {
+              updates.pumpActive = true;
+              shouldUpdate = true;
+            } else if (sensorNode.moisture > (effectiveThreshold + 20) && node.pumpActive) {
+              updates.pumpActive = false;
+              shouldUpdate = true;
+            }
           }
-        });
-      } else {
-        onUpdate({ moisture: Math.max(0, state.moisture - 0.2) });
-      }
-      
-      // Slight ph drift simulation
-      if (Math.random() > 0.95) {
-        onUpdate({ ph: state.ph + (Math.random() - 0.5) * 0.1 });
-      }
+        }
 
+        // Moisture Physics
+        if (node.type === 'sensor' || node.type === 'integrated') {
+          const isBeingWatered = node.pumpActive || nodes.some(n => n.type === 'pump' && n.linkedSensorId === node.id && n.pumpActive);
+          const moistureGain = isBeingWatered ? 1.5 : (isRaining ? 0.8 : 0);
+          const moistureLoss = isRaining ? 0.1 : 0.3; // Evaporation slowed by rain
+
+          updates.moisture = Math.min(100, Math.max(0, (node.moisture || 0) + moistureGain - moistureLoss));
+          shouldUpdate = true;
+        }
+
+        if (shouldUpdate) onUpdate(node.id, updates);
+      });
     }, 4000);
     return () => clearInterval(interval);
-  }, [state.pumpActive, state.moisture, state.mode, state.threshold, state.ph, state.nutrients]);
+  }, [nodes, onUpdate, weather]);
 
-  const moistureColor = state.moisture < state.threshold ? 'text-red-400' : state.moisture > 75 ? 'text-blue-400' : 'text-emerald-400';
-  const phStatus = state.ph < 6.0 ? 'Acidic' : state.ph > 7.5 ? 'Alkaline' : 'Optimal';
-  const phColor = phStatus === 'Optimal' ? 'text-emerald-400' : 'text-orange-400';
+  const handleAddNodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const node: IoTNode = {
+      id: `node-${Date.now()}`,
+      name: newNode.name || 'Field Node',
+      type: newNode.type as any || 'integrated',
+      targetCrop: newNode.targetCrop,
+      status: 'online',
+      lastReading: new Date().toISOString(),
+      mode: 'manual',
+      threshold: 30,
+      duration: 15,
+      frequency: 6,
+      ...(newNode.type === 'pump' ? { pumpActive: false, linkedSensorId: '' } : { 
+        moisture: 45, ph: 6.8, nutrients: { n: 50, p: 50, k: 50 },
+        pumpActive: newNode.type === 'integrated' ? false : undefined
+      })
+    };
+    onAdd(node);
+    setIsAddingNode(false);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Sensor Cockpit */}
-        <div className="bg-slate-900 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden border border-slate-800">
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center border border-emerald-500/30">
-                  <Activity className="w-6 h-6 text-emerald-400" />
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 font-outfit">Field Network</h2>
+          <p className="text-slate-700 font-bold text-sm tracking-tight">Active link to {nodes.length} IoT units.</p>
+        </div>
+        <button onClick={() => setIsAddingNode(true)} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black flex items-center gap-2 hover:bg-emerald-600 transition-all shadow-xl">
+          <Plus className="w-5 h-5" /> Deploy Node
+        </button>
+      </div>
+
+      {isAddingNode && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in duration-300">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-slate-900 font-outfit">Deploy Hardware</h3>
+              <button onClick={() => setIsAddingNode(false)} className="p-2 text-slate-400 hover:text-black transition-all"><X className="w-6 h-6" /></button>
+            </div>
+            <form onSubmit={handleAddNodeSubmit} className="space-y-6">
+              <input required className="w-full px-5 py-4 bg-slate-50 border border-slate-300 rounded-2xl outline-none font-black" placeholder="Node Name" value={newNode.name} onChange={e => setNewNode({...newNode, name: e.target.value})} />
+              <div className="grid grid-cols-3 gap-3">
+                {['integrated', 'sensor', 'pump'].map(t => (
+                  <button key={t} type="button" onClick={() => setNewNode({...newNode, type: t as any})} className={`py-3 rounded-xl font-black text-[10px] uppercase border-2 ${newNode.type === t ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-200'}`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-emerald-600 transition-all">Confirm Deployment</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-12">
+        {nodes.map(node => (
+          <div key={node.id} className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
+            <div className="bg-slate-900 p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${node.pumpActive ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-slate-800 border-slate-700'}`}>
+                   {node.type === 'pump' ? <Zap className="w-6 h-6" /> : <Activity className="w-6 h-6 text-emerald-400" />}
                 </div>
                 <div>
-                  <h3 className="font-bold text-xl text-white font-outfit">Live Soil Feed</h3>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Node: {state.mode.toUpperCase()}_AGRI_PRO</p>
+                  <h3 className="text-xl font-black font-outfit uppercase tracking-tight">{node.name}</h3>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Assigned: {node.targetCrop}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold text-emerald-400 uppercase">Field Secure</span>
-              </div>
+              <button onClick={() => onRemove(node.id)} className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-red-500"><Trash2 className="w-5 h-5" /></button>
             </div>
 
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 mb-2">
-                  <Droplets className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase">Moisture</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-5xl font-black ${moistureColor}`}>{Math.round(state.moisture)}%</span>
-                </div>
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-1000 ${state.moisture < state.threshold ? 'bg-red-500' : 'bg-emerald-500'}`} 
-                    style={{ width: `${state.moisture}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 mb-2">
-                  <Microscope className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase">Soil pH</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-5xl font-black ${phColor}`}>{state.ph.toFixed(1)}</span>
-                </div>
-                <p className={`text-[10px] font-bold uppercase tracking-tight ${phColor}`}>{phStatus}</p>
-              </div>
-            </div>
-
-            {/* Nutrients NPK */}
-            <div className="grid grid-cols-3 gap-4 mb-8 pt-8 border-t border-slate-800">
-              {Object.entries(state.nutrients).map(([key, val]) => (
-                <div key={key} className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                  <span className="text-[10px] font-black text-slate-500 uppercase block mb-1">{key} Level</span>
-                  <span className="text-xl font-bold text-white">{Math.round(val as number)}</span>
-                  <div className="w-full bg-slate-700 h-1 rounded-full mt-2 overflow-hidden">
-                    <div className="bg-emerald-500 h-full" style={{ width: `${(val as number)}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-6 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Decision Model Sync'd</span>
-              </div>
-              <span className="text-[10px] text-slate-600 font-medium">{new Date(state.lastReading).toLocaleTimeString()}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Automation Hub */}
-        <div className="bg-white rounded-[2rem] border p-8 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-2xl font-bold text-slate-800 font-outfit">Resource Hub</h3>
-            <Settings2 className="w-5 h-5 text-slate-400" />
-          </div>
-
-          <div className="flex bg-slate-100 p-1 rounded-2xl mb-8">
-            {(['manual', 'timer', 'sensor'] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => onUpdate({ mode: m })}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold capitalize transition-all ${state.mode === m ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-6">
-            {state.mode === 'manual' && (
-              <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${state.pumpActive ? 'bg-emerald-600 text-white' : 'bg-white text-slate-400 border'}`}>
-                    <Power className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-800">Irrigation Valve</h4>
-                    <p className="text-xs text-slate-500">Manual Direct Control</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => onUpdate({ pumpActive: !state.pumpActive })}
-                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${state.pumpActive ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${state.pumpActive ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-            )}
-
-            {state.mode === 'timer' && (
-              <div className="space-y-4">
-                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100">
-                  <div className="flex items-center gap-3 text-blue-700 mb-4">
-                    <Clock className="w-5 h-5" />
-                    <h4 className="font-bold">Cyclic Watering</h4>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-blue-400 uppercase">Frequency (Hrs)</label>
-                      <input 
-                        type="number" 
-                        value={state.frequency}
-                        onChange={(e) => onUpdate({ frequency: Number(e.target.value) })}
-                        className="w-full bg-white border-none rounded-xl px-3 py-2 text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500"
-                      />
+            <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-12 bg-slate-50/20">
+              {node.type !== 'pump' && (
+                <div className="space-y-6">
+                  <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <div className="flex justify-between mb-4">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Soil Moisture</span>
+                       <span className="text-2xl font-black text-slate-900">{Math.round(node.moisture || 0)}%</span>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-blue-400 uppercase">Duration (Min)</label>
-                      <input 
-                        type="number"
-                        value={state.duration}
-                        onChange={(e) => onUpdate({ duration: Number(e.target.value) })}
-                        className="w-full bg-white border-none rounded-xl px-3 py-2 text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500"
-                      />
+                    <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                       <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${node.moisture}%` }} />
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {state.mode === 'sensor' && (
-              <div className="space-y-4">
-                <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100">
-                  <div className="flex items-center gap-3 text-emerald-700 mb-4">
-                    <Zap className="w-5 h-5" />
-                    <h4 className="font-bold">ML Logic Engine</h4>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-xs font-bold text-emerald-600">
-                      <span>Threshold: {state.threshold}% Moisture</span>
+                  {node.nutrients && (
+                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Nutrient Analysis</span>
+                       {Object.entries(node.nutrients).map(([key, val]) => (
+                         <div key={key} className="flex items-center justify-between">
+                            <span className="text-[11px] font-black uppercase text-slate-800">{key} Index</span>
+                            <span className="text-xs font-black text-emerald-700">{Math.round(val)}%</span>
+                         </div>
+                       ))}
                     </div>
-                    <input 
-                      type="range"
-                      min="10"
-                      max="60"
-                      value={state.threshold}
-                      onChange={(e) => onUpdate({ threshold: Number(e.target.value) })}
-                      className="w-full accent-emerald-600"
-                    />
+                  )}
+                </div>
+              )}
+              {node.type !== 'sensor' && (
+                <div className="space-y-6">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 flex gap-2 overflow-x-auto no-scrollbar">
+                    {['manual', 'timer', 'sensor', 'ml_optimized'].map(m => (
+                      <button key={m} onClick={() => onUpdate(node.id, { mode: m as any })} className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${node.mode === m ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-500'}`}>
+                        {m.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                     <div className="flex items-center gap-4">
+                        <div className={`p-4 rounded-2xl ${node.pumpActive ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                           <Droplets className="w-6 h-6" />
+                        </div>
+                        <h4 className="font-black text-slate-900 uppercase">Hydro Actuator</h4>
+                     </div>
+                     <button onClick={() => onUpdate(node.id, { pumpActive: !node.pumpActive })} className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${node.pumpActive ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                        <span className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${node.pumpActive ? 'translate-x-7' : 'translate-x-1'}`} />
+                     </button>
                   </div>
                 </div>
-                <div className="px-6 py-4 bg-slate-900 rounded-2xl flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Auto-Hydrator:</span>
-                  <span className={`text-xs font-black uppercase tracking-widest ${state.pumpActive ? 'text-emerald-400' : 'text-slate-500'}`}>
-                    {state.pumpActive ? 'Watering' : 'Optimized'}
-                  </span>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { CheckCircle2, Clock, Star, RefreshCw, Camera, CloudOff, Plus, Trash2, Edit3, X, Sparkles, BrainCircuit, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Clock, Star, RefreshCw, Camera, CloudOff, Plus, Trash2, Edit3, X, Sparkles, BrainCircuit, ShieldCheck, Map, ArrowRight } from 'lucide-react';
 import { Quest } from '../types';
 
 interface QuestsProps {
@@ -41,6 +41,12 @@ const Quests: React.FC<QuestsProps> = ({ quests, onComplete, loading, onRefresh,
     onComplete(points);
   };
 
+  const roadMap = [
+    { title: "NDLM Integration", desc: "Direct link to National Digital Livestock Mission.", status: "Phase 1" },
+    { title: "TFLite Edge Migration", desc: "Move model inference fully client-side.", status: "Phase 2" },
+    { title: "Carbon Credit Tokenization", desc: "Calculate sequestration via blockchain.", status: "Phase 3" }
+  ];
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-6 bg-white rounded-[2.5rem] border border-emerald-50 shadow-xl shadow-emerald-500/5">
@@ -59,7 +65,7 @@ const Quests: React.FC<QuestsProps> = ({ quests, onComplete, loading, onRefresh,
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-900 font-outfit">Mission Hub</h2>
@@ -83,8 +89,27 @@ const Quests: React.FC<QuestsProps> = ({ quests, onComplete, loading, onRefresh,
         </div>
       </div>
 
+      {/* Strategic Roadmap HUD */}
+      <section className="bg-slate-900 rounded-[3rem] p-10 text-white relative overflow-hidden">
+         <div className="relative z-10">
+            <h3 className="text-xl font-black font-outfit uppercase tracking-tighter mb-8 flex items-center gap-3">
+              <Map className="w-6 h-6 text-emerald-500" /> Strategic Roadmap
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               {roadMap.map((item, i) => (
+                 <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-3xl hover:bg-white/10 transition-all group">
+                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400 mb-2 block">{item.status}</span>
+                    <h4 className="font-black text-sm mb-2">{item.title}</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed">{item.desc}</p>
+                 </div>
+               ))}
+            </div>
+         </div>
+         <ArrowRight className="absolute -bottom-10 -right-10 w-48 h-48 opacity-5 text-emerald-500" />
+      </section>
+
       {isCreating && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl animate-in fade-in zoom-in duration-300">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-bold text-slate-800 font-outfit">New Custom Quest</h3>

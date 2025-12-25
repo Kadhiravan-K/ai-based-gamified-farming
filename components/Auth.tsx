@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Leaf, Mail, Lock, User, ArrowRight, ShieldCheck, Sprout, Ghost } from 'lucide-react';
-import { User as UserType } from '../types';
+import { Leaf, Mail, Lock, User, ArrowRight, ShieldCheck, Sprout, Ghost, UserCircle, Briefcase } from 'lucide-react';
+import { User as UserType, UserRole } from '../types';
 
 interface AuthProps {
   onAuthComplete: (user: UserType) => void;
@@ -10,6 +10,7 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState<UserRole>('farmer');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,10 +20,16 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
   const handleGuestAccess = () => {
     const guestUser: UserType = {
       id: 'guest-' + Math.random().toString(36).substr(2, 5),
-      name: 'Guest Farmer',
+      name: 'Guest User',
       email: 'guest@agriquest.local',
+      role: 'farmer',
       privacy: 'private',
-      isGuest: true
+      isGuest: true,
+      notificationPrefs: {
+        agriUpdates: true,
+        cropAlerts: true,
+        events: true
+      }
     };
     onAuthComplete(guestUser);
   };
@@ -36,7 +43,13 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
         id: Math.random().toString(36).substr(2, 9),
         name: isLogin ? (formData.email.split('@')[0]) : formData.name,
         email: formData.email,
-        privacy: 'public'
+        role: role,
+        privacy: 'public',
+        notificationPrefs: {
+          agriUpdates: true,
+          cropAlerts: true,
+          events: true
+        }
       };
       setLoading(false);
       onAuthComplete(mockUser);
@@ -57,10 +70,10 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
         <div className="relative z-10">
           <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[3rem] border border-white/10 mb-8 max-w-xl shadow-2xl">
             <h2 className="text-5xl font-extrabold text-white font-outfit leading-tight mb-6">
-              Empowering Sustainable Farms.
+              Agricultural Intelligence Exchange.
             </h2>
             <p className="text-emerald-100/80 text-xl font-medium leading-relaxed">
-              Automate your irrigation, track your growth, and join a global movement of regenerative agriculture.
+              Where sustainable production meets strategic procurement. Verified by AI.
             </p>
           </div>
         </div>
@@ -76,11 +89,26 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
         <div className="max-w-md w-full">
           <div className="mb-12">
             <h3 className="text-4xl font-black text-slate-900 font-outfit mb-3">
-              {isLogin ? 'Welcome Back' : 'Get Started'}
+              {isLogin ? 'Welcome Back' : 'Create Account'}
             </h3>
             <p className="text-slate-500 font-medium">
-              {isLogin ? 'Access your automated dashboard' : 'Create your secure farm identity'}
+              Join the neural farm network today
             </p>
+          </div>
+
+          <div className="flex bg-slate-100 p-1 rounded-2xl mb-10">
+            <button 
+              onClick={() => setRole('farmer')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${role === 'farmer' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-500'}`}
+            >
+              <UserCircle className="w-4 h-4" /> Farmer
+            </button>
+            <button 
+              onClick={() => setRole('buyer')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${role === 'buyer' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-500'}`}
+            >
+              <Briefcase className="w-4 h-4" /> Buyer / Reseller
+            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -90,7 +118,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input 
-                    type="text" required placeholder="John Farmer"
+                    type="text" required placeholder="Name"
                     className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
@@ -130,7 +158,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
               className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black shadow-2xl hover:bg-emerald-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : (
-                <> {isLogin ? 'Sign In' : 'Sign Up'} <ArrowRight className="w-5 h-5" /> </>
+                <> {isLogin ? 'Sign In' : 'Register'} <ArrowRight className="w-5 h-5" /> </>
               )}
             </button>
           </form>
@@ -140,7 +168,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthComplete }) => {
               onClick={handleGuestAccess}
               className="w-full bg-white text-slate-600 py-4 rounded-2xl font-bold border-2 border-slate-100 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
             >
-              <Ghost className="w-5 h-5" /> Skip for now (Guest Access)
+              <Ghost className="w-5 h-5" /> Skip for now
             </button>
             <p className="text-center text-slate-500 text-sm font-medium">
               {isLogin ? "New here?" : "Already a member?"}{' '}

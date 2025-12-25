@@ -1,6 +1,6 @@
 {
-  "name": "AgriQuest: Green Farm Movement",
-  "description": "A gamified platform empowering farmers to adopt sustainable practices through personalized quests, community leaderboards, and AI-powered agricultural advice.",
+  "name": "AgriQuest: Neural Farm OS",
+  "description": "Mobile-first agricultural intelligence platform featuring AI Field Scanning, Deep Learning crop diagnostics, blockchain verification, and Veo harvest simulation.",
   "requestFramePermissions": [
     "camera",
     "microphone",
