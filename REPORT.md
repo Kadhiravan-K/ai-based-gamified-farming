@@ -53,6 +53,7 @@ To ensure long-term sustainability, AgriQuest gamifies compliance via the **Neur
 - [ ] **e-NAM Sync**: Real-time bidding on the Electronic National Agriculture Market.
 - [ ] **Bhashini Dialect Layer**: Specialized native dialect support for regional Indian sub-districts.
 - [ ] **OAuth 2.0 Identity**: Migration to standard social and government ID logins.
+- [ ] **Adding filters and sort by**: adding filters and short by every whare for easy identification.
 
 ### Phase 2: Hardware & Edge (Connectivity)
 - [ ] **TFLite Edge Inference**: Moving basic diagnostics to client-side for zero-latency in 2G areas.
